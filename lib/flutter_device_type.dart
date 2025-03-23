@@ -7,18 +7,19 @@ import 'dart:math' as Math;
 import 'package:flutter/widgets.dart';
 
 class Device {
-  static double devicePixelRatio =
+  static double get devicePixelRatio =>
       WidgetsBinding.instance.platformDispatcher.views.first.devicePixelRatio;
-  static ui.Size size =
+  static ui.Size get size =>
       WidgetsBinding.instance.platformDispatcher.views.first.physicalSize;
-  static double width = size.width;
-  static double height = size.height;
-  static double screenWidth = width / devicePixelRatio;
-  static double screenHeight = height / devicePixelRatio;
-  static ui.Size screenSize = ui.Size(screenWidth, screenHeight);
+  static double get width => size.width;
+  static double get height => size.height;
+  static double get screenWidth => width / devicePixelRatio;
+  static double get screenHeight => height / devicePixelRatio;
+  static ui.Size get screenSize => ui.Size(screenWidth, screenHeight);
+
   final bool isTablet, isPhone, isIos, isAndroid, isIphoneX, hasNotch;
   static Device? _device;
-  static VoidCallback? _originalOnMetricsChange; // Store original handler
+  static bool _isMetricsHandlerSet = false;
 
   Device({
     required this.isTablet,
@@ -29,27 +30,21 @@ class Device {
     required this.hasNotch,
   });
 
-  factory Device.get() {
-    if (_device != null) return _device!;
-
-    // Set up metrics change handler only once
-    if (_originalOnMetricsChange == null) {
-      _originalOnMetricsChange =
-          WidgetsBinding.instance.platformDispatcher.onMetricsChanged;
+  // Static method to initialize the metrics change handler
+  static void _initializeMetricsHandler() {
+    if (!_isMetricsHandlerSet) {
       WidgetsBinding.instance.platformDispatcher.onMetricsChanged = () {
-        _device = null;
-        devicePixelRatio = WidgetsBinding
-            .instance.platformDispatcher.views.first.devicePixelRatio;
-        size =
-            WidgetsBinding.instance.platformDispatcher.views.first.physicalSize;
-        width = size.width;
-        height = size.height;
-        screenWidth = width / devicePixelRatio;
-        screenHeight = height / devicePixelRatio;
-        screenSize = ui.Size(screenWidth, screenHeight);
-        _originalOnMetricsChange?.call(); // Call original handler if it exists
+        _device = null; // Invalidate cache on metrics change
       };
+      _isMetricsHandlerSet = true;
     }
+  }
+
+  factory Device.get() {
+    // Set up the metrics handler before computing device properties
+    _initializeMetricsHandler();
+
+    if (_device != null) return _device!;
 
     bool isTablet;
     bool isPhone;

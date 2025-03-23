@@ -18,7 +18,7 @@ class Device {
   static ui.Size screenSize = ui.Size(screenWidth, screenHeight);
   final bool isTablet, isPhone, isIos, isAndroid, isIphoneX, hasNotch;
   static Device? _device;
-  static Function? onMetricsChange;
+  static VoidCallback? _originalOnMetricsChange; // Store original handler
 
   Device({
     required this.isTablet,
@@ -32,12 +32,14 @@ class Device {
   factory Device.get() {
     if (_device != null) return _device!;
 
-    if (onMetricsChange == null) {
-      onMetricsChange =
+    // Set up metrics change handler only once
+    if (_originalOnMetricsChange == null) {
+      _originalOnMetricsChange =
           WidgetsBinding.instance.platformDispatcher.onMetricsChanged;
       WidgetsBinding.instance.platformDispatcher.onMetricsChanged = () {
         _device = null;
-
+        devicePixelRatio = WidgetsBinding
+            .instance.platformDispatcher.views.first.devicePixelRatio;
         size =
             WidgetsBinding.instance.platformDispatcher.views.first.physicalSize;
         width = size.width;
@@ -45,8 +47,7 @@ class Device {
         screenWidth = width / devicePixelRatio;
         screenHeight = height / devicePixelRatio;
         screenSize = ui.Size(screenWidth, screenHeight);
-
-        onMetricsChange!();
+        _originalOnMetricsChange?.call(); // Call original handler if it exists
       };
     }
 
